@@ -20,6 +20,8 @@ Proposed Approach
 - **Non-contiguous memory** (2.46x in Test 10)
 - **Complex numbers** (1.43x in Test 11)
 
+Our custom function also out performs for biggerr dimension multiplication with around 20% faster speed.
+
 On **Average Runtime** for all 15 test cases, our custom model surpasses the original by `1.53x`.
 
 Conversely, `einops` surpasses the custom implementation in nine tests, particularly in high-dimensional tensors and edge cases (e.g., 3.62x faster in Test 5 with empty dimensions). On average, the custom approach is **22.14% faster** (0.0000971s vs. 0.0001186s), highlighting its edge in specific scenarios.
