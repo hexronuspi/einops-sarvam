@@ -11,7 +11,7 @@ Proposed Approach
 
 *   Numba with parallel execution for JIT-Compiler for small Numpy Values
 *   C++([Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page)) for non-trivial indexing and reordering
-  
+
 # Performance Comparison: Custom Eigen-Based Rearrange vs. Einops
 
 ## Overview
@@ -36,5 +36,75 @@ The custom `rearrange` leverages Eigen’s `Tensor<float, 10>` for direct C++ ex
 - **Low overhead**: Bypassing `einops`’s dynamic parsing and NumPy reliance reduces latency.
 
 However, `einops` shines in scalability and flexibility, outperforming in complex, high-dimensional cases. This suggests a trade-off: the custom solution excels in targeted efficiency, while `einops` offers robust generality.
+
+```
+Test Passed:
+
+Test 1 passed: Basic 3D rearrangement - 0.003496 seconds
+    tensor = np.ones((2, 3, 4))
+    result = rearrange(tensor, 'a b c -> c (b a)')
+
+Test 2 passed: 2D transposition - 0.000223 seconds
+    tensor = np.random.rand(3, 4)
+    result = rearrange(tensor, 'i j -> j i')
+
+Test 3 passed: 4D complex rearrangement - 0.000165 seconds
+    tensor = np.ones((2, 3, 4, 5))
+    result = rearrange(tensor, 'a b c d -> (c d) (a b)')
+
+Test 4 passed: 1D identity - 0.000100 seconds
+    tensor = np.ones((5,))
+    result = rearrange(tensor, 'a -> a')
+
+Test 5 passed: Empty dimension - 0.000111 seconds
+    tensor = np.ones((0, 3, 4))
+    result = rearrange(tensor, 'a b c -> c (b a)')
+
+Test 6 passed: Large dimensions - 2.712717 seconds
+    tensor = np.ones((2000, 200, 3000))
+    result = rearrange(tensor, 'a b c -> (a b) c')
+
+Test 7 passed: Square matrix transposition - 0.021598 seconds
+    tensor = np.eye(4)
+    result = rearrange(tensor, 'i j -> j i')
+
+Test 8 passed: 5D rearrangement - 0.000246 seconds
+    tensor = np.ones((2, 3, 4, 5, 6))
+    result = rearrange(tensor, 'a b c d e -> e (d c b a)')
+
+Test 9 passed: Singleton dimensions - 0.000088 seconds
+    tensor = np.ones((1, 1, 1))
+    result = rearrange(tensor, 'a b c -> c (b a)')
+
+Test 10 passed: Non-contiguous memory - 0.000103 seconds
+    tensor = np.ones((3, 4, 5))[:, ::2, :]
+    result = rearrange(tensor, 'a b c -> c (b a)')
+
+Test 11 passed: Complex numbers - 0.000086 seconds
+    tensor = np.ones((2, 3), dtype=complex)
+    result = rearrange(tensor, 'a b -> b a')
+
+Test 12 passed: Batch dimension - 0.000077 seconds
+    tensor = np.ones((5, 2, 3))
+    result = rearrange(tensor, 'b i j -> b (j i)')
+
+Test 13 passed: Full flattening - 0.000071 seconds
+    tensor = np.ones((2, 3, 4))
+    result = rearrange(tensor, 'a b c -> (a b c)')
+
+Test 14 passed: Adding singleton - 0.000065 seconds
+    tensor = np.ones((2, 3))
+    result = rearrange(tensor, 'a b -> a b 1')
+
+Test 15 passed: Asymmetric partial flatten - 0.000070 seconds
+    tensor = np.ones((3, 5, 7))
+    result = rearrange(tensor, 'a b c -> a (b c)')
+
+
+All tests completed!
+Average time: 0.182614 seconds
+Min time: 0.000065 seconds
+Max time: 2.712717 seconds
+```
 
 Current Implementation only uses Eigen, I had some problem in writing Numba, which I am working on and will be fixed fast.
