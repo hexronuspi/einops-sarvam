@@ -1,7 +1,12 @@
 # einops-sarvam
-**Sarvam Research Fellow 2025**  
+**Sarvam Research Fellow 2025**
 
 ---
+
+[Email](mailto:hexronus@gmail.com) - hexronus@gmail.com \
+[Portfolio](https://hexronus.vercel.app/) - https://hexronus.vercel.app \
+[LinkedIn](https://www.linkedin.com/in/hexronus/) - https://www.linkedin.com/in/hexronus/
+
 
 ## Getting Started: Running the Code  
 
@@ -29,7 +34,7 @@ This strategy balances acceleration with low-level C++ execution.
 
 We performed a rigorous evaluation of tensor rearrangement implementation with the Eigen library, a C++ backend, and a Pybind11 interface—against the widely adopted `einops` library. Our work tested 15 test cases.  
 
-The custom solution surpasses `einops`, achieving speedups ranging from **1.43x to 4.81x**, with standout performance in:  
+The custom solution surpasses `einops` for closed testing on custom tests, achieving speedups ranging from **1.43x to 4.81x**, with standout performance in:  
 - **Basic 2D/3D Transpositions**: Up to 4.81x faster, showcasing exceptional efficiency in fundamental operations.  
 - **Non-Contiguous Memory Access**: A 2.46x speedup, highlighting adept handling of complex memory layouts.  
 - **Complex Number Operations**: A 1.43x advantage, demonstrating robustness across data types.  
