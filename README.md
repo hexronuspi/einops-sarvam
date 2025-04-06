@@ -62,9 +62,15 @@ However, `einops` shines in scalability and flexibility, outperforming in comple
 
 The code was tested again the doc test cases and other test cases, both result screenshots are displayed here, the other test cases are also present in the github repository as tests.py,
 
+#### Given Tests in docs
 ![given_test_run](https://github.com/hexronuspi/einops-sarvam/blob/main/test_run_images/given_test_run.png)
 
+#### Hidden Tests taken on own
 ![hidden_test_run](https://github.com/hexronuspi/einops-sarvam/blob/main/test_run_images/hidden_test_run.png)
+
+
+#### Error fallback
+![error_test_run](https://github.com/hexronuspi/einops-sarvam/blob/main/test_run_images/error_fall_back.png)
 
 
 Note: Currently `Numba` does not work currently and I am working on it, I will try my best to update the Github repository by 7th April 2025 11:00pm, the deadline for the task.
