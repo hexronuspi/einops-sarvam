@@ -10,7 +10,7 @@
 
 ## Getting Started: Running the Code  
 
-To test the code, download the `.ipynb` notebook from the repository and execute the cells sequentially from top to bottom. For custom test cases, modify the `tests.py` file, available at:  
+To test the code, download the `.ipynb` notebook from the repository, open it in google colab(for preinstalled libraries) and execute the cells sequentially from top to bottom. For custom test cases, modify the `tests.py` file, available at:  
 [**https://github.com/hexronuspi/einops-sarvam/blob/main/tests.py**](https://github.com/hexronuspi/einops-sarvam/blob/main/tests.py). This `tests.py` file also gets downloded when the cells are run in sequential manner.
 
 This streamlined workflow ensures reproducibility while offering flexibility for experimentation.
