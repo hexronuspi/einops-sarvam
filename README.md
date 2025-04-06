@@ -13,7 +13,7 @@
 To test the code, download the `.ipynb` notebook from the repository, open it in google colab(for preinstalled libraries) and execute the cells sequentially from top to bottom. For custom test cases, modify the `tests.py` file, available at:  
 [**https://github.com/hexronuspi/einops-sarvam/blob/main/tests.py**](https://github.com/hexronuspi/einops-sarvam/blob/main/tests.py). This `tests.py` file also gets downloded when the cells are run in sequential manner.
 
-Want an easier alternative? here's the [colab](https://colab.research.google.com/drive/1i1BLGdvP5knlcfmA8M9wn-teBlnq2smk?usp=sharing) link, just select run all.
+an easier alternative, here's the [colab](https://colab.research.google.com/drive/1i1BLGdvP5knlcfmA8M9wn-teBlnq2smk?usp=sharing) link, just select run all.
 
 ---
 
