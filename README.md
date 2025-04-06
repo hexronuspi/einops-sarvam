@@ -72,5 +72,3 @@ The code was tested again the doc test cases and other test cases, both result s
 #### Error fallback
 ![error_test_run](https://github.com/hexronuspi/einops-sarvam/blob/main/test_run_images/error_fall_back.png)
 
-
-Note: Currently `Numba` does not work currently and I am working on it, I will try my best to update the Github repository by 7th April 2025 11:00pm, the deadline for the task.
