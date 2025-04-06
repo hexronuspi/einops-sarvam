@@ -20,7 +20,7 @@ Proposed Approach
 - **Non-contiguous memory** (2.46x in Test 10)
 - **Complex numbers** (1.43x in Test 11)
 
-Our custom function also out performs for higher dimension multiplication (for eg: (4000, 200) multiplication in customEinops takes 2.7 seconds whereas, the original takes 3.2 seconds) with around 20% faster speed.
+Our custom function also out performs for higher dimension multiplication (for eg: (4000, 200) multiplication in customEinops takes 2.7 seconds whereas, the original takes 3.2 seconds) with around 1.28x faster speed.
 
 ```python
     tensor = np.ones((2000, 200, 3000))
