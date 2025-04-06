@@ -13,7 +13,7 @@
 namespace py = pybind11;
 
 using Index = Eigen::Index;
-using TensorFixed = Eigen::Tensor<float, 10, Eigen::RowMajor>;  // Fixed rank 10
+using TensorFixed = Eigen::Tensor<float, 10, Eigen::RowMajor>;  
 
 class ParserError : public std::runtime_error {
 public:
@@ -73,7 +73,7 @@ public:
             }
         }
 
-        return std::make_pair(input_spec, output_spec);  // Avoid C++17 structured binding
+        return std::make_pair(input_spec, output_spec);  
     }
 
 private:

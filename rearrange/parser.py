@@ -4,7 +4,7 @@ class ParserError(Exception):
     pass
 
 class PatternParser:
-    def tokenize(self, pattern: str) -> List[str]:
+    def tokenize(self, pattern: str) -> List[Union[str, Tuple[str, ...]]]:
         tokens = []
         i = 0
         while i < len(pattern):
@@ -19,8 +19,8 @@ class PatternParser:
                     j += 1
                 if j == len(pattern):
                     raise ParserError("Unclosed parenthesis")
-                group = pattern[i+1:j].split()
-                tokens.append(tuple(group))
+                group = tuple(pattern[i+1:j].split())
+                tokens.append(group)
                 i = j + 1
             elif pattern[i].isdigit():
                 tokens.append(pattern[i])
@@ -37,6 +37,12 @@ class PatternParser:
         input_str, output_str = parts
         input_spec = self.tokenize(input_str.strip())
         output_spec = self.tokenize(output_str.strip())
+        
+        input_has_ellipsis = '...' in input_spec
+        output_has_ellipsis = '...' in output_spec
+        if input_has_ellipsis != output_has_ellipsis:
+            raise ParserError("Ellipsis must be present in both input and output or neither")
+        
         return input_spec, output_spec
 
     def get_axes(self, spec: List[Union[str, Tuple[str, ...]]]) -> Set[str]:

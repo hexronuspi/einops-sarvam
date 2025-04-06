@@ -1,122 +1,105 @@
 import numpy as np
-from rearrange import rearrange
-import time
+from rearrange import rearrange 
+import pytest
 
-def run_tests():
-    timings = {}
-    
-    start = time.time()
-    tensor = np.ones((2, 3, 4))
-    result = rearrange(tensor, 'a b c -> c (b a)')
-    assert result.shape == (4, 6), "Test 1 failed"
-    timings['Test 1'] = time.time() - start
-    print(f"Test 1 passed: Basic 3D rearrangement - {timings['Test 1']:.6f} seconds")
+def test_basic_group_split():
+    x = np.random.rand(12, 10)
+    result = rearrange(x, '(h w) c -> h w c', h=3)
+    assert result.shape == (3, 4, 10), "Basic group split failed"
+    assert np.allclose(result.reshape(12, 10), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.random.rand(3, 4)
-    result = rearrange(tensor, 'i j -> j i')
-    assert result.shape == (4, 3), "Test 2 failed"
-    timings['Test 2'] = time.time() - start
-    print(f"Test 2 passed: 2D transposition - {timings['Test 2']:.6f} seconds")
+def test_fully_specified_group():
+    x = np.random.rand(12, 10)
+    result = rearrange(x, '(h w) c -> h w c', h=3, w=4)
+    assert result.shape == (3, 4, 10), "Fully specified group failed"
+    assert np.allclose(result.reshape(12, 10), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((2, 3, 4, 5))
-    result = rearrange(tensor, 'a b c d -> (c d) (a b)')
-    assert result.shape == (20, 6), "Test 3 failed"
-    timings['Test 3'] = time.time() - start
-    print(f"Test 3 passed: 4D complex rearrangement - {timings['Test 3']:.6f} seconds")
+def test_invalid_group_size():
+    x = np.random.rand(12, 10)
+    with pytest.raises(ValueError, match="Group size mismatch"):
+        rearrange(x, '(h w) c -> h w c', h=5, w=3) 
 
-    start = time.time()
-    tensor = np.ones((5,))
-    result = rearrange(tensor, 'a -> a')
-    assert result.shape == (5,), "Test 4 failed"
-    timings['Test 4'] = time.time() - start
-    print(f"Test 4 passed: 1D identity - {timings['Test 4']:.6f} seconds")
+def test_too_many_unknowns():
+    x = np.random.rand(12, 10)
+    with pytest.raises(ValueError, match="Too many unspecified axes"):
+        rearrange(x, '(h w x) c -> h w x c')  
 
-    start = time.time()
-    tensor = np.ones((0, 3, 4))
-    result = rearrange(tensor, 'a b c -> c (b a)')
-    assert result.shape == (4, 0), "Test 5 failed"
-    timings['Test 5'] = time.time() - start
-    print(f"Test 5 passed: Empty dimension - {timings['Test 5']:.6f} seconds")
+def test_ellipsis_basic():
+    x = np.random.rand(2, 3, 4)
+    result = rearrange(x, '... c -> c ...')
+    assert result.shape == (4, 2, 3), "Ellipsis basic failed"
+    assert np.allclose(result.transpose(1, 2, 0), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((10, 20, 30))
-    result = rearrange(tensor, 'a b c -> (a b) c')
-    assert result.shape == (200, 30), "Test 6 failed"
-    timings['Test 6'] = time.time() - start
-    print(f"Test 6 passed: Large dimensions - {timings['Test 6']:.6f} seconds")
+def test_ellipsis_with_group():
+    x = np.random.rand(2, 12, 10)
+    result = rearrange(x, 'b (h w) c -> b h w c', h=3)
+    assert result.shape == (2, 3, 4, 10), "Ellipsis with group failed"
+    assert np.allclose(result.reshape(2, 12, 10), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.eye(4)
-    result = rearrange(tensor, 'i j -> j i')
-    assert result.shape == (4, 4), "Test 7 failed"
-    timings['Test 7'] = time.time() - start
-    print(f"Test 7 passed: Square matrix transposition - {timings['Test 7']:.6f} seconds")
+def test_singleton_axis():
+    x = np.ones((1, 5, 1))
+    result = rearrange(x, '1 h 1 -> h')
+    assert result.shape == (5,), "Singleton axis failed"
+    assert np.allclose(result, np.ones(5)), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((2, 3, 4, 5, 6))
-    result = rearrange(tensor, 'a b c d e -> e (d c b a)')
-    assert result.shape == (6, 120), "Test 8 failed"
-    timings['Test 8'] = time.time() - start
-    print(f"Test 8 passed: 5D rearrangement - {timings['Test 8']:.6f} seconds")
+def test_invalid_singleton():
+    x = np.random.rand(2, 5, 3)
+    with pytest.raises(ValueError, match="Expected singleton axis"):
+        rearrange(x, '1 h c -> h c')
 
-    start = time.time()
-    tensor = np.ones((1, 1, 1))
-    result = rearrange(tensor, 'a b c -> c (b a)')
-    assert result.shape == (1, 1), "Test 9 failed"
-    timings['Test 9'] = time.time() - start
-    print(f"Test 9 passed: Singleton dimensions - {timings['Test 9']:.6f} seconds")
+def test_empty_tensor():
+    x = np.random.rand(0, 3, 4)
+    result = rearrange(x, 'b h w -> w (h b)')
+    assert result.shape == (4, 0), "Empty tensor failed"
 
-    start = time.time()
-    tensor = np.ones((3, 4, 5))[:, ::2, :]
-    result = rearrange(tensor, 'a b c -> c (b a)')
-    assert result.shape == (5, 6), "Test 10 failed"
-    timings['Test 10'] = time.time() - start
-    print(f"Test 10 passed: Non-contiguous memory - {timings['Test 10']:.6f} seconds")
+def test_complex_numbers():
+    x = np.ones((2, 3), dtype=complex)
+    result = rearrange(x, 'h w -> w h')
+    assert result.shape == (3, 2), "Complex numbers failed"
+    assert result.dtype == complex, "Complex dtype not preserved"
+    assert np.allclose(result, np.ones((3, 2), dtype=complex)), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((2, 3), dtype=complex)
-    result = rearrange(tensor, 'a b -> b a')
-    assert result.shape == (3, 2), "Test 11 failed"
-    timings['Test 11'] = time.time() - start
-    print(f"Test 11 passed: Complex numbers - {timings['Test 11']:.6f} seconds")
+def test_non_contiguous_memory():
+    x = np.ones((3, 4, 5))[:, ::2, :]
+    result = rearrange(x, 'h w c -> c (w h)')
+    assert result.shape == (5, 6), "Non-contiguous memory failed"
+    assert np.allclose(result.reshape(5, 3, 2).transpose(1, 2, 0), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((5, 2, 3))
-    result = rearrange(tensor, 'b i j -> b (j i)')
-    assert result.shape == (5, 6), "Test 12 failed"
-    timings['Test 12'] = time.time() - start
-    print(f"Test 12 passed: Batch dimension - {timings['Test 12']:.6f} seconds")
+def test_large_dimensions():
+    x = np.random.rand(10, 20, 30)
+    result = rearrange(x, 'a b c -> (a b) c')
+    assert result.shape == (200, 30), "Large dimensions failed"
+    assert np.allclose(result.reshape(10, 20, 30), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((2, 3, 4))
-    result = rearrange(tensor, 'a b c -> (a b c)')
-    assert result.shape == (24,), "Test 13 failed"
-    timings['Test 13'] = time.time() - start
-    print(f"Test 13 passed: Full flattening - {timings['Test 13']:.6f} seconds")
+def test_full_flattening():
+    x = np.random.rand(2, 3, 4)
+    result = rearrange(x, 'a b c -> (a b c)')
+    assert result.shape == (24,), "Full flattening failed"
+    assert np.allclose(result.reshape(2, 3, 4), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((2, 3))
-    result = rearrange(tensor, 'a b -> a b 1')
-    assert result.shape == (2, 3, 1), "Test 14 failed"
-    timings['Test 14'] = time.time() - start
-    print(f"Test 14 passed: Adding singleton - {timings['Test 14']:.6f} seconds")
+def test_adding_singleton():
+    x = np.ones((2, 3))
+    result = rearrange(x, 'h w -> h w 1')
+    assert result.shape == (2, 3, 1), "Adding singleton failed"
+    assert np.allclose(result.squeeze(-1), x), "Data integrity compromised"
 
-    start = time.time()
-    tensor = np.ones((3, 5, 7))
-    result = rearrange(tensor, 'a b c -> a (b c)')
-    assert result.shape == (3, 35), "Test 15 failed"
-    timings['Test 15'] = time.time() - start
-    print(f"Test 15 passed: Asymmetric partial flatten - {timings['Test 15']:.6f} seconds")
+def test_asymmetric_flatten():
+    x = np.ones((3, 5, 7))
+    result = rearrange(x, 'a b c -> a (b c)')
+    assert result.shape == (3, 35), "Asymmetric flatten failed"
+    assert np.allclose(result.reshape(3, 5, 7), x), "Data integrity compromised"
 
-    avg_time = sum(timings.values()) / len(timings)
-    min_time = min(timings.values())
-    max_time = max(timings.values())
-    print(f"\nAll tests completed!")
-    print(f"Average time: {avg_time:.6f} seconds")
-    print(f"Min time: {min_time:.6f} seconds")
-    print(f"Max time: {max_time:.6f} seconds")
+def test_no_op():
+    x = np.random.rand(5, 6)
+    result = rearrange(x, 'h w -> h w')
+    assert result.shape == (5, 6), "No-op failed"
+    assert np.allclose(result, x), "Data integrity compromised"
+
+def test_high_dimensional():
+    x = np.random.rand(2, 3, 4, 5, 6)
+    result = rearrange(x, 'a b c d e -> e (d c b a)')
+    assert result.shape == (6, 120), "High-dimensional failed"
+    assert np.allclose(result.reshape(6, 5, 4, 3, 2).transpose(4, 3, 2, 1, 0), x), "Data integrity compromised"
 
 if __name__ == "__main__":
-    run_tests()
+    pytest.main(["-v", __file__])
