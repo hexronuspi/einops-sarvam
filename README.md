@@ -30,6 +30,12 @@ This strategy balances acceleration with low-level C++ execution.
 
 ## Performance Comparison: Custom Eigen-Based Rearrange vs. Einops  
 
+### Tests
+
+*  All tests validate shape, value equivalence (np.allclose), and dtype preservation.
+*  Fallbacks are fail-fast with clear error messages.
+*  Support for inference, ellipses, singleton handling, and nested flatten/unflatten.
+
 ### Overview  
 
 We performed a rigorous evaluation of tensor rearrangement implementation with the Eigen library, a C++ backend, and a Pybind11 interface—against the widely adopted `einops` library. Our work tested 15 test cases.  
@@ -59,6 +65,7 @@ The custom `rearrange` leverages Eigen’s `Tensor<float, 10>` for direct C++ ex
 - **Low overhead**: Bypassing `einops`’s dynamic parsing and NumPy reliance reduces latency.
 
 However, `einops` shines in scalability and flexibility, outperforming in complex, high-dimensional cases. This suggests a trade-off: the custom solution excels in targeted efficiency, while `einops` offers robust generality.
+
 
 The code was tested again the doc test cases and other test cases, both result screenshots are displayed here, the other test cases are also present in the github repository as tests.py,
 
