@@ -10,7 +10,7 @@ eigen_backend = Extension(
         '/usr/include/eigen3',
         pybind11.get_include(),
     ],
-    extra_compile_args=['-std=c++11', '-ftemplate-depth=1024'],
+    extra_compile_args=['-std=c++17', '-ftemplate-depth=2048'],
     language='c++'
 )
 

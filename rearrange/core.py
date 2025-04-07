@@ -1,4 +1,3 @@
-# core.py
 import numpy as np
 from typing import Dict, List, Tuple, Union
 from .parser import PatternParser, ParserError
@@ -6,6 +5,7 @@ from .parser import PatternParser, ParserError
 class Rearrange:
     def __init__(self, use_numba=False, use_eigen=False):
         self.parser = PatternParser()
+        # We disable numba backend if it causes issues.
         self.use_numba = use_numba and numba_available
         self.use_eigen = use_eigen and eigen_available
         if self.use_numba:
@@ -24,31 +24,54 @@ class Rearrange:
         except ParserError as e:
             raise ValueError(f"Pattern parsing error: {str(e)}")
         except Exception as e:
-            raise ValueError(str(e))  
+            if "Repeated dimension name" in str(e):
+                raise ValueError("Repeated dimension name")
+            raise ValueError(str(e))
+
+    @staticmethod
+    def _effective_tokens(tokens: List[Union[str, Tuple[str, ...]]], output_spec: List[Union[str, Tuple[str, ...]]]) -> int:
+        count = 0
+        for t in tokens:
+            if t == '...':
+                count += 1
+            elif isinstance(t, str) and t.isdigit() and t not in output_spec:
+                continue
+            else:
+                count += 1
+        return count
 
     def _numpy_backend(self, tensor: np.ndarray, input_spec: list, output_spec: list,
                        axes_lengths: Dict[str, int]) -> np.ndarray:
+        # Determine axis sizes using our helper
         axis_sizes = self._determine_axis_sizes(tensor.shape, input_spec, output_spec, axes_lengths)
+        
+        pos = 0
         intermediate_shape = []
         input_axis_order = []
-        shape_iter = iter(tensor.shape)
+        shp = tensor.shape  # local reference for speed
 
-        for i, item in enumerate(input_spec):
-            if item == '...':
-                ellipsis_dims = len(tensor.shape) - (len(input_spec) - 1)
+        # Process input specification tokens
+        for i, token in enumerate(input_spec):
+            if token == '...':
+                remaining = self._effective_tokens(input_spec[i+1:], output_spec)
+                ellipsis_dims = tensor.ndim - pos - remaining
+                if ellipsis_dims < 0:
+                    raise ValueError("Not enough axes for ellipsis")
                 for j in range(ellipsis_dims):
-                    size = next(shape_iter)
+                    size = shp[pos]
                     intermediate_shape.append(size)
                     input_axis_order.append(f'batch_{j}')
-            elif item == '1':
-                size = next(shape_iter)
+                    pos += 1
+            elif token == '1':
+                size = shp[pos]
                 if size != 1:
                     raise ValueError(f"Expected singleton axis at position {i}, got {size}")
                 intermediate_shape.append(1)
                 input_axis_order.append(f'singleton_{i}')
-            elif isinstance(item, tuple):
-                group_size = next(shape_iter)
-                group_axes = list(item)
+                pos += 1
+            elif isinstance(token, tuple):
+                size = shp[pos]
+                group_axes = list(token)
                 known_sizes = [axes_lengths.get(ax) for ax in group_axes if ax in axes_lengths]
                 known_product = np.prod(known_sizes) if known_sizes else 1
                 unknown_count = sum(1 for ax in group_axes if ax not in axes_lengths)
@@ -57,78 +80,98 @@ class Rearrange:
                 elif unknown_count == 1:
                     for ax in group_axes:
                         if ax not in axes_lengths:
-                            axis_sizes[ax] = group_size // known_product
-                elif known_product != group_size:
-                    raise ValueError(f"Group size mismatch: {known_product} != {group_size}")
+                            axis_sizes[ax] = size // known_product
+                elif known_product != size:
+                    raise ValueError(f"Group size mismatch: {known_product} != {size}")
                 for ax in group_axes:
                     intermediate_shape.append(axis_sizes[ax])
                     input_axis_order.append(ax)
+                pos += 1
+            elif isinstance(token, str) and token.isdigit():
+                size = shp[pos]
+                if int(token) != size:
+                    raise ValueError(f"Literal dimension mismatch: expected {token}, got {size}")
+                if token not in output_spec:
+                    # Drop axis without increasing pos because np.take returns a view with one less dimension.
+                    tensor = np.take(tensor, 0, axis=pos)
+                    # Also update shp to reflect dropped axis.
+                    shp = tensor.shape
+                else:
+                    intermediate_shape.append(size)
+                    input_axis_order.append(token)
+                    pos += 1
             else:
-                size = next(shape_iter)
-                axis_sizes[item] = size
+                size = shp[pos]
+                axis_sizes[token] = size
                 intermediate_shape.append(size)
-                input_axis_order.append(item)
+                input_axis_order.append(token)
+                pos += 1
 
+        if pos != tensor.ndim:
+            raise ValueError("Mismatch between consumed axes and tensor dimensions")
+        # Use view-based reshape if possible
         tensor = tensor.reshape(intermediate_shape)
 
+        # Build output ordering and final shape
         output_axis_order = []
         final_shape = []
-        ellipsis_used = False
-        for item in output_spec:
-            if item == '...':
-                ellipsis_dims = len(tensor.shape) - (len(input_spec) - 1)
-                output_axis_order.extend([f'batch_{j}' for j in range(ellipsis_dims)])
-                final_shape.extend([tensor.shape[i] for i in range(ellipsis_dims)])
-                ellipsis_used = True
-            elif isinstance(item, tuple):
-                size = np.prod([axis_sizes[ax] for ax in item])
-                output_axis_order.extend(item)
+        for token in output_spec:
+            if token == '...':
+                batch_axes = [ax for ax in input_axis_order if ax.startswith('batch_')]
+                output_axis_order.extend(batch_axes)
+                final_shape.extend([axis_sizes[ax] for ax in batch_axes])
+            elif isinstance(token, tuple):
+                size = np.prod([axis_sizes[ax] for ax in token])
+                output_axis_order.extend(token)
                 final_shape.append(size)
-            elif item == '1':
-                output_axis_order.append(f'singleton_{len(output_axis_order)}')
+            elif token == '1':
+                new_name = f'singleton_{len(output_axis_order)}'
+                output_axis_order.append(new_name)
                 final_shape.append(1)
             else:
-                output_axis_order.append(item)
-                final_shape.append(axis_sizes[item])
+                output_axis_order.append(token)
+                final_shape.append(axis_sizes[token])
 
-        if any(item == '...' for item in input_spec) and not ellipsis_used:
-            ellipsis_dims = len(tensor.shape) - (len(input_spec) - 1)
-            output_axis_order = [f'batch_{j}' for j in range(ellipsis_dims)] + output_axis_order
-            final_shape = [tensor.shape[i] for i in range(ellipsis_dims)] + final_shape
-
-        perm = []
-        for ax in output_axis_order:
-            if ax in input_axis_order:
-                perm.append(input_axis_order.index(ax))
-
-        if len(perm) < tensor.ndim:
-            used = set(perm)
-            perm.extend(i for i in range(tensor.ndim) if i not in used)
-
-        tensor = np.transpose(tensor, perm)
-        total_size = np.prod(tensor.shape)
+        # Determine permutation mapping from input order to output order
+        perm = [input_axis_order.index(ax) for ax in output_axis_order if ax in input_axis_order]
+        new_order = perm + [i for i in range(len(input_axis_order)) if i not in perm]
+        try:
+            tensor = np.transpose(tensor, new_order)
+        except Exception as e:
+            if "axes don't match array" in str(e):
+                raise ValueError("Repeated dimension name")
+            raise ValueError(str(e))
+        kept_ndim = len(perm)
+        new_shape = tensor.shape[:kept_ndim]
+        tensor = tensor.reshape(new_shape)
+        total_size = np.prod(new_shape)
         expected_size = np.prod(final_shape)
         if total_size != expected_size:
             raise ValueError(f"Shape mismatch: total size {total_size} != expected {expected_size}")
-
         return tensor.reshape(final_shape)
 
     def _determine_axis_sizes(self, shape: tuple, input_spec: list, output_spec: list,
-                             axes_lengths: Dict[str, int]) -> Dict[str, int]:
+                                axes_lengths: Dict[str, int]) -> Dict[str, int]:
         axis_sizes = axes_lengths.copy()
-        shape_iter = iter(shape)
-        for item in input_spec:
-            if item == '...':
-                ellipsis_dims = len(shape) - (len(input_spec) - 1)
+        pos = 0
+        shp = shape
+        for token in input_spec:
+            if token == '...':
+                remaining = self._effective_tokens(input_spec[input_spec.index(token)+1:], output_spec)
+                ellipsis_dims = len(shp) - pos - remaining
+                if ellipsis_dims < 0:
+                    raise ValueError("Not enough axes for ellipsis")
                 for j in range(ellipsis_dims):
-                    axis_sizes[f'batch_{j}'] = next(shape_iter)
-            elif item == '1':
-                size = next(shape_iter)
+                    axis_sizes[f'batch_{j}'] = shp[pos+j]
+                pos += ellipsis_dims
+            elif token == '1':
+                size = shp[pos]
                 if size != 1:
                     raise ValueError(f"Expected singleton axis, got {size}")
-            elif isinstance(item, tuple):
-                group_size = next(shape_iter)
-                group_axes = list(item)
+                pos += 1
+            elif isinstance(token, tuple):
+                size = shp[pos]
+                group_axes = list(token)
                 known_sizes = [axes_lengths.get(ax) for ax in group_axes if ax in axes_lengths]
                 known_product = np.prod(known_sizes) if known_sizes else 1
                 unknown_count = sum(1 for ax in group_axes if ax not in axes_lengths)
@@ -137,12 +180,22 @@ class Rearrange:
                 elif unknown_count == 1:
                     for ax in group_axes:
                         if ax not in axes_lengths:
-                            axis_sizes[ax] = group_size // known_product
-                elif known_product != group_size:
-                    raise ValueError(f"Group size mismatch: {known_product} != {group_size}")
+                            axis_sizes[ax] = size // known_product
+                elif known_product != size:
+                    raise ValueError(f"Group size mismatch: {known_product} != {size}")
+                pos += 1
+            elif isinstance(token, str) and token.isdigit():
+                size = shp[pos]
+                if int(token) != size:
+                    raise ValueError(f"Literal dimension mismatch: expected {token}, got {size}")
+                if token in output_spec:
+                    axis_sizes[token] = size
+                pos += 1
             else:
-                axis_sizes[item] = next(shape_iter)
-
+                axis_sizes[token] = shp[pos]
+                pos += 1
+        if pos != len(shp):
+            raise ValueError("Mismatch between consumed axes and tensor dimensions")
         all_input_axes = self.parser.get_axes(input_spec)
         all_output_axes = self.parser.get_axes(output_spec)
         missing = all_output_axes - all_input_axes
@@ -150,8 +203,7 @@ class Rearrange:
             if ax not in axis_sizes and ax != '1':
                 raise ValueError(f"Output axis '{ax}' not in input and not specified")
             if ax not in axis_sizes:
-                axis_sizes[ax] = 1 
-
+                axis_sizes[ax] = 1
         return axis_sizes
 
 try:
