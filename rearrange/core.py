@@ -5,7 +5,6 @@ from .parser import PatternParser, ParserError
 class Rearrange:
     def __init__(self, use_numba=False, use_eigen=False):
         self.parser = PatternParser()
-        # We disable numba backend if it causes issues.
         self.use_numba = use_numba and numba_available
         self.use_eigen = use_eigen and eigen_available
         if self.use_numba:
@@ -42,15 +41,13 @@ class Rearrange:
 
     def _numpy_backend(self, tensor: np.ndarray, input_spec: list, output_spec: list,
                        axes_lengths: Dict[str, int]) -> np.ndarray:
-        # Determine axis sizes using our helper
         axis_sizes = self._determine_axis_sizes(tensor.shape, input_spec, output_spec, axes_lengths)
         
         pos = 0
         intermediate_shape = []
         input_axis_order = []
-        shp = tensor.shape  # local reference for speed
+        shp = tensor.shape  
 
-        # Process input specification tokens
         for i, token in enumerate(input_spec):
             if token == '...':
                 remaining = self._effective_tokens(input_spec[i+1:], output_spec)
@@ -92,9 +89,7 @@ class Rearrange:
                 if int(token) != size:
                     raise ValueError(f"Literal dimension mismatch: expected {token}, got {size}")
                 if token not in output_spec:
-                    # Drop axis without increasing pos because np.take returns a view with one less dimension.
                     tensor = np.take(tensor, 0, axis=pos)
-                    # Also update shp to reflect dropped axis.
                     shp = tensor.shape
                 else:
                     intermediate_shape.append(size)
@@ -109,10 +104,8 @@ class Rearrange:
 
         if pos != tensor.ndim:
             raise ValueError("Mismatch between consumed axes and tensor dimensions")
-        # Use view-based reshape if possible
         tensor = tensor.reshape(intermediate_shape)
 
-        # Build output ordering and final shape
         output_axis_order = []
         final_shape = []
         for token in output_spec:
@@ -132,7 +125,6 @@ class Rearrange:
                 output_axis_order.append(token)
                 final_shape.append(axis_sizes[token])
 
-        # Determine permutation mapping from input order to output order
         perm = [input_axis_order.index(ax) for ax in output_axis_order if ax in input_axis_order]
         new_order = perm + [i for i in range(len(input_axis_order)) if i not in perm]
         try:
