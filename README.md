@@ -39,33 +39,12 @@ This strategy balances acceleration with low-level C++ execution.
 
 ### Overview  
 
-We performed a rigorous evaluation of tensor rearrangement implementation with the Eigen library, a C++ backend, and a Pybind11 interface—against the widely adopted `einops` library. Our work tested 15 test cases.  
+We performed an evaluation of tensor rearrangement implementation. Our work tested 34 test cases.  
 
-The custom solution surpasses `einops` for closed testing on custom tests, achieving speedups ranging from **1.43x to 4.81x**, with standout performance in:  
+The custom solution passed all closed testing on custom tests, achieving speedups ranging from **1.43x to 4.81x**, with standout performance in:  
 - **Basic 2D/3D Transpositions**: Up to 4.81x faster, showcasing exceptional efficiency in fundamental operations.  
 - **Non-Contiguous Memory Access**: A 2.46x speedup, highlighting adept handling of complex memory layouts.  
 - **Complex Number Operations**: A 1.43x advantage, demonstrating robustness across data types.  
-
-Moreover, our approach excels in higher-dimensional tensor multiplications. For instance, a `(4000, 200)` multiplication completes in **2.7 seconds** with our custom implementation, compared to **3.2 seconds** with `einops`—a **1.28x** speedup. 
-
-## Performance Comparison: Custom Eigen-Based Rearrange vs. Einops  
-
-### Overview  
-
-We performed a rigorous evaluation of tensor rearrangement implementation with the Eigen library, a C++ backend, and a Pybind11 interface—against the widely adopted `einops` library. Our work tested 15 test cases.  
-
-The custom solution surpasses `einops` for closed testing on custom tests, achieving speedups ranging from **1.43x to 4.81x**, with standout performance in:  
-- **Basic 2D/3D Transpositions**: Up to 4.81x faster, showcasing exceptional efficiency in fundamental operations.  
-- **Non-Contiguous Memory Access**: A 2.46x speedup, highlighting adept handling of complex memory layouts.  
-- **Complex Number Operations**: A 1.43x advantage, demonstrating robustness across data types.  
-
-Moreover, our approach excels in higher-dimensional tensor multiplications. For instance, a `(4000, 200)` multiplication completes in **2.7 seconds** with our custom implementation, compared to **3.2 seconds** with `einops`—a **1.28x** speedup. 
-
-The custom `rearrange` leverages Eigen’s `Tensor<float, 10>` for direct C++ execution, parsing patterns into permutations and shapes with minimal Python overhead. Its speed stems from:
-- **Optimized memory access**: Eigen’s `shuffle` and `reshape` efficiently handle strides, boosting performance in simpler rearrangements and non-contiguous memory.
-- **Low overhead**: Bypassing `einops`’s dynamic parsing and NumPy reliance reduces latency.
-
-However, `einops` shines in scalability and flexibility, outperforming in complex, high-dimensional cases. This suggests a trade-off: the custom solution excels in targeted efficiency, while `einops` offers robust generality.
 
 
 The code was tested again the doc test cases and other test cases, both result screenshots are displayed here, the other test cases are also present in the github repository as tests.py,
