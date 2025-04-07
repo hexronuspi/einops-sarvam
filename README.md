@@ -21,6 +21,7 @@ an easier alternative, here's the [colab](https://colab.research.google.com/driv
 
 Our methodology uses two paradigms to redefine tensor rearrangement efficiency:  
 
+- **Numpy**: Default Numpy execution  
 - **Numba with Parallel Execution**: Leveraging JIT compilation to accelerate operations on small NumPy arrays, harnessing parallelism for optimal performance.  
 - **C++ with Eigen**: Employing the Eigen library ([https://eigen.tuxfamily.org](https://eigen.tuxfamily.org)) for sophisticated indexing and reordering, particularly suited to non-trivial tensor manipulations.  
 
