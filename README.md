@@ -1,8 +1,4 @@
 # einops-sarvam
-**Sarvam Research Fellow 2025**
-
----
-
 [Email](mailto:hexronus@gmail.com) - hexronus@gmail.com \
 [Portfolio](https://hexronus.vercel.app/) - https://hexronus.vercel.app \
 [LinkedIn](https://www.linkedin.com/in/hexronus/) - https://www.linkedin.com/in/hexronus/
